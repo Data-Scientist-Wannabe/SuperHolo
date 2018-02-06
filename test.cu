@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <cuda.h>
 
-#define ARRAY_SIZE 16
+#define ARRAY_SIZE 256
 
 #define N_BLOCKS 1
-#define N_THREADS 128
+#define N_THREADS 1024
 
 __global__ void array_doubler(float * array, int size)
 {
@@ -36,7 +36,7 @@ int main(void)
 
     cudaMemcpy(d_array, h_array, ARRAY_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
-    // call method
+    // call method with dumb syntax
     array_doubler<<<dimGrid, dimBlock>>>(d_array, ARRAY_SIZE);
 
     cudaDeviceSynchronize();
