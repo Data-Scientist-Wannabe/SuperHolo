@@ -1,4 +1,5 @@
 #include <fstream>
+#include <cmath>
 
 #include "error.h"
 #include "bmp.h"
@@ -106,19 +107,24 @@ int pattern::export_bmp(const char * const pFilename)
 
     for(uint32_t c = 1; c < this->width * this->height; c++)
     {
-        double val = abs(this->data[c]);
+        double val = fabs(this->data[c]);
         if(val > max_amp) {
             max_amp = val;
         }
     }
 
-    for(uint32_t c = 0; c < this->width * this->height; c++)
+    for(uint32_t x = 0; x < this->width; x++)
     {
-        uint8_t val = abs(this->data[c] / max_amp) * 255;
-        pixel_data[c].raw = 0xffffffff;
-        pixel_data[c].r = pixel_data[c].g = pixel_data[c].b = val;
-    }
+        for(uint32_t y = 0; y < this->height; y++)
+        {
+            uint32_t data_pos = x + y * this->width;
+            uint32_t pixel_pos = x + (this->height - y - 1) * this->width;
 
+            uint8_t val = fabs(this->data[data_pos] / max_amp) * 0xff;
+            pixel_data[pixel_pos].raw = 0xffffffff;
+            pixel_data[pixel_pos].r = pixel_data[pixel_pos].g = pixel_data[pixel_pos].b = val;
+        }
+    }
 
     file.write(reinterpret_cast<char*>(&bmp), sizeof(struct bmp_header));
 

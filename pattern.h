@@ -13,6 +13,7 @@ struct pattern_header
 };
 
 class pattern{
+public:
     uint32_t    width;
     uint32_t    height;
 
