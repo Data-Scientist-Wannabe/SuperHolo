@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#define BITMAP_ID 0x424d
+#define BITMAP_ID 0x4d42
 
 /* see https://en.wikipedia.org/wiki/BMP_file_format */
 
@@ -13,7 +13,7 @@ struct bmp_header
     uint16_t    reserved_1;         /* application specific */
     uint16_t    reserved_2;         /* application specific */
     uint32_t    offset;             /* offset of where the image data can be found */
-};
+} __attribute__ ((packed));
 
 struct dib_header
 {
@@ -28,14 +28,14 @@ struct dib_header
     int32_t     v_dpm;              /* vertical resolution (pixels per meter) */
     uint32_t    pallete_count;      /* number of colors in pallete, or zero for 2^n */
     uint32_t    important_colors;   /* 0 by default, usually ignored */
-};
+} __attribute__ ((packed));
 
 struct pixel32bpp
 {
     union{
         uint32_t raw;
         struct{
-            uint8_t r, g, b, a;
+            uint8_t b, g, r, a;
         };
     };
 };
