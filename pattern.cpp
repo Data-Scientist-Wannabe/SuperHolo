@@ -40,7 +40,7 @@ int pattern::load(const char * const pFilename)
 
     file.seekg(sizeof(pattern_header), std::ios::beg);
     file.read(reinterpret_cast<char *>(this->data), this->size);
-    file.close;
+    file.close();
 
     return SUCCESS;
 }
@@ -62,7 +62,7 @@ int pattern::save(const char * const pFilename)
 
     file.write(reinterpret_cast<char *>(this->data), this->size);
 
-    file.close;
+    file.close();
 
     return SUCCESS;
 }
@@ -129,7 +129,9 @@ int pattern::export_bmp(const char * const pFilename)
     
     file.close();
 
-    free(pixel_data)
+    free(pixel_data);
+
+    return SUCCESS;
 }
 
 pattern::pattern(uint32_t const width, uint32_t const height)

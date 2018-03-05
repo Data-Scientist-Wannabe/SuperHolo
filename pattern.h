@@ -20,7 +20,7 @@ class pattern{
     uint32_t    size;
 
 public:
-    pattern(void) : width(0), height(0), size(0), data(nullptr) {};
+    pattern(void) : width(0), height(0), data(nullptr), size(0) {};
     pattern(uint32_t const width, uint32_t const height);
     ~pattern(void);
 
