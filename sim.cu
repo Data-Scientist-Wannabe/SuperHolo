@@ -98,7 +98,7 @@ int main(void)
     cudaMemcpy(d_points, h_points, POINT_COUNT * sizeof(double4), cudaMemcpyHostToDevice);
 
     // call method with dumb syntax
-    simulation<<<dimGrid, dimBlock>>>(d_pattern, d_points, POINT_COUNT);
+    simulation<<<dimGrid, dimBlock>>>(d_pattern, d_points, 0);
 
     cudaDeviceSynchronize();
 
