@@ -6,6 +6,7 @@
 
 /* see https://en.wikipedia.org/wiki/BMP_file_format */
 
+#pragma pack(push, 1)  
 struct bmp_header
 {
     uint16_t    id;                 /* identifiy bitmap and dib */
@@ -13,8 +14,10 @@ struct bmp_header
     uint16_t    reserved_1;         /* application specific */
     uint16_t    reserved_2;         /* application specific */
     uint32_t    offset;             /* offset of where the image data can be found */
-} __attribute__ ((packed));
+}; // __attribute__ ((packed));
+#pragma pack(pop)  
 
+#pragma pack(push, 1)  
 struct dib_header
 {
     uint32_t    dib_size;           /* size of this dib header */
@@ -28,7 +31,8 @@ struct dib_header
     int32_t     v_dpm;              /* vertical resolution (pixels per meter) */
     uint32_t    pallete_count;      /* number of colors in pallete, or zero for 2^n */
     uint32_t    important_colors;   /* 0 by default, usually ignored */
-} __attribute__ ((packed));
+}; //__attribute__ ((packed));
+#pragma pack(pop)  
 
 struct pixel32bpp
 {
