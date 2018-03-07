@@ -68,7 +68,7 @@ __global__ void simulation(double * pattern, double4 * points, int count)
             for(int i = 0; i < count; i++)
             {
                 double3 point = make_double3(points[i].x, points[i].y, points[i].z);
-                pattern[index] += points[i].w * val(uv, point) * intensity(uv, point);
+                pattern[index] += points[i].w * val(uv, point);// * intensity(uv, point);
             }
         }
     }
