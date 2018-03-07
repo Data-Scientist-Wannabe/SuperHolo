@@ -63,7 +63,7 @@ __global__ void simulation(double * pattern, double4 * points, int count)
             double2 uv = {x * ARRAY_WIDTH_INV * PATTERN_WIDTH, y * ARRAY_HEIGHT_INV * PATTERN_HEIGHT};
             int index = y * ARRAY_WIDTH + x;
 
-            pattern[index]= plane(uv.x);
+            pattern[index]= 0.0; // plane(uv.x);
 
             for(int i = 0; i < count; i++)
             {
@@ -98,7 +98,7 @@ int main(void)
     cudaMemcpy(d_points, h_points, POINT_COUNT * sizeof(double4), cudaMemcpyHostToDevice);
 
     // call method with dumb syntax
-    simulation<<<dimGrid, dimBlock>>>(d_pattern, d_points, 0);
+    simulation<<<dimGrid, dimBlock>>>(d_pattern, d_points, POINT_COUNT);
 
     cudaDeviceSynchronize();
 
