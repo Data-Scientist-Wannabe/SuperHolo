@@ -25,7 +25,7 @@
 #define LAMBDA          632.8e-9
 #define LAMBDA_INV      (1.0 / LAMBDA) //1.580278128950695e6
 #define TWO_LAMBDA_INV  (2.0 / LAMBDA) //3.160556257901391e6
-#define REF_BEAM_ANGLE  (CUDART_PIO6 * 0.5)
+#define REF_BEAM_ANGLE  (0.00565003)    // ~0.33 degrees
 
 #define PLANE_CONST (TWO_LAMBDA_INV * sin(REF_BEAM_ANGLE))
 #define VAL_CONST   (TWO_LAMBDA_INV)
@@ -92,9 +92,9 @@ int main(void)
     cudaMalloc((void**)&d_pattern,  ARRAY_SIZE * sizeof(double));
     cudaMalloc((void**)&d_points,   POINT_COUNT* sizeof(double4));
 
-    h_points[0] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.20, 0.05, 0.33);
-    h_points[1] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.50, 0.05, 0.33);
-    h_points[2] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.80, 0.05, 0.33);
+    h_points[0] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.25, 0.30, 0.33);
+    h_points[1] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.50, 0.30, 0.33);
+    h_points[2] = make_double4(PATTERN_WIDTH * 0.50, PATTERN_HEIGHT * 0.75, 0.30, 0.33);
 
     cudaMemcpy(d_points, h_points, POINT_COUNT * sizeof(double4), cudaMemcpyHostToDevice);
 
