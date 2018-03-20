@@ -19,8 +19,8 @@
 
 #define PATTERN_WIDTH   6571.8e-6f
 #define PATTERN_HEIGHT  3699e-6f
-#define N_BLOCKS    608      //
-#define N_THREADS   684     // Threads per block
+#define N_BLOCKS    541      //
+#define N_THREADS   512     // Threads per block
 
 #define LAMBDA          632.8e-9f
 #define LAMBDA_INV      1.580278128950695e6f
@@ -80,6 +80,29 @@ __global__ void simulation(float * pattern, float4 * points, int count)
     return;
 }
 
+__global__ void simulation2(float * pattern, float4 * points, int count)
+{
+    float sum;
+
+    for(int index = blockIdx.x * blockDim.x + threadIdx.x; index < ARRAY_SIZE; index += gridDim.x * blockDim.x)
+    {
+        int y = index / ARRAY_WIDTH;
+        int x = index - (y * ARRAY_WIDTH);
+        float2 uv = make_float2(x * ARRAY_WIDTH_INV * PATTERN_WIDTH, y * ARRAY_HEIGHT_INV * PATTERN_HEIGHT);
+
+        sum = plane(uv.x);
+
+            for(int j = 0; j < count; j++)
+            {
+                int i = j % POINT_COUNT;
+                float3 point = make_float3(points[i].x, points[i].y, points[i].z);
+                sum += points[i].w * intensity(uv, point) * val(uv, point);
+            }
+
+            pattern[index] = sum;
+    }
+}
+
 int main(void)
 {
     float * d_pattern;
@@ -106,6 +129,11 @@ int main(void)
 
     // call method with dumb syntax
     simulation<<<dimGrid, dimBlock>>>(d_pattern, d_points, 400);
+
+    cudaDeviceSynchronize();
+
+    // call method with dumb syntax
+    simulation2<<<dimGrid, dimBlock>>>(d_pattern, d_points, 400);
 
     cudaDeviceSynchronize();
 
