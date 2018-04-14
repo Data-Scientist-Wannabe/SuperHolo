@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <cstdint>
 
 #define MAGIC 0x5ADB01
