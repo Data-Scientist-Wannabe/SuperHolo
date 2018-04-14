@@ -1,5 +1,7 @@
 #include <fstream>
 #include <cmath>
+#include <vector>
+#include <algorithm>
 
 #include "error.h"
 #include "bmp.h"
@@ -30,9 +32,9 @@ int pattern::load(const char * const pFilename)
 
     this->width = header.width;
     this->height = header.height;
-    this->size = header.width * header.height * sizeof(double);
+    this->size = header.width * header.height * sizeof(float);
 
-    this->data = reinterpret_cast<double *>(malloc(this->size));
+    this->data = reinterpret_cast<float *>(malloc(this->size));
 
     if(!this->data){
         file.close();
@@ -68,6 +70,18 @@ int pattern::save(const char * const pFilename)
     return SUCCESS;
 }
 
+bool amp_sort(float i, float j)
+{
+    return (fabs(i) < fabs(j));
+}
+
+float find_99_7_percentile(float * data, uint32_t count)
+{
+    std::vector<float> v(data, data + count);
+    std::sort(v.begin(), v.end(), amp_sort);
+    return fabs(v[254.0f/255.0f * count]);
+}
+
 int pattern::export_bmp(const char * const pFilename)
 {
     struct bmp_header bmp;
@@ -75,7 +89,7 @@ int pattern::export_bmp(const char * const pFilename)
 
     struct pixel32bpp * pixel_data;
 
-    double max_amp = abs(this->data[0]);
+    float max_amp = abs(this->data[0]);
 
     std::ofstream file(pFilename, std::ios::binary | std::ios::trunc);
     if(!file.is_open()) {
@@ -105,13 +119,16 @@ int pattern::export_bmp(const char * const pFilename)
     dib.pallete_count  = 0;
     dib.important_colors = 0;
 
-    for(uint32_t c = 1; c < this->width * this->height; c++)
+    /* for(uint32_t c = 1; c < this->width * this->height; c++)
     {
-        double val = fabs(this->data[c]);
+        float val = fabs(this->data[c]);
         if(val > max_amp) {
             max_amp = val;
         }
-    }
+    } */
+
+    max_amp = find_99_7_percentile(this->data, this->width * this->height);
+    printf("max_amp = %f\n", max_amp);
 
     for(uint32_t x = 0; x < this->width; x++)
     {
@@ -120,7 +137,9 @@ int pattern::export_bmp(const char * const pFilename)
             uint32_t data_pos = x + y * this->width;
             uint32_t pixel_pos = x + (this->height - y - 1) * this->width;
 
-            uint8_t val = fabs(this->data[data_pos] / max_amp) * 0xff;
+            float amp = fabs(this->data[data_pos]);
+
+            uint8_t val = amp > max_amp ? 0xff : amp / max_amp * 0xff;
             pixel_data[pixel_pos].raw = 0xffffffff;
             pixel_data[pixel_pos].r = pixel_data[pixel_pos].g = pixel_data[pixel_pos].b = val;
         }
@@ -141,9 +160,9 @@ int pattern::export_bmp(const char * const pFilename)
 }
 
 pattern::pattern(uint32_t const width, uint32_t const height)
-    :width(width), height(height), size(width * height * sizeof(double))
+    :width(width), height(height), size(width * height * sizeof(float))
 {
-    this->data = reinterpret_cast<double *>(malloc(this->size));
+    this->data = reinterpret_cast<float *>(malloc(this->size));
 }
 
 pattern::~pattern(void)
