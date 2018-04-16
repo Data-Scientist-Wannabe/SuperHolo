@@ -9,9 +9,11 @@
 #include <sstream>
 
 static const GLfloat g_vertex_buffer_data[] = {
-   -1.0f, -1.0f, 0.0f,
-   1.0f, -1.0f, 0.0f,
-   0.0f,  1.0f, 0.0f,
+/*	position x, y	texcoord u,v */
+   -1.0f, -1.0f,	0.0f, 1.0f, 
+   -1.0f,  1.0f,	0.0f, 0.0f,
+    1.0f, -1.0f,	1.0f, 1.0f,
+	1.0f,  1.0f,	1.0f, 0.0f,
 };
 
 static void error_callback(int error, const char* description)
@@ -118,7 +120,6 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	return ProgramID;
 }
 
-
 int main(void)
 {
     GLFWwindow* window;
@@ -133,12 +134,8 @@ int main(void)
     }
     glfwMakeContextCurrent(window);
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
-
     glfwSetKeyCallback(window, key_callback);
-
     printf("%s\n", glGetString(GL_VERSION));
-
-    //
 
     // This will identify our vertex buffer
     GLuint vertexbuffer;
@@ -151,6 +148,22 @@ int main(void)
 
     GLuint programID = LoadShaders( "shaders/test_vs.glsl", "shaders/test_ps.glsl" );
 
+	GLuint texture;
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glUniform1i(glGetUniformLocation(programID, "tex"), 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	// Black/white checkerboard
+	float pixels[] = {
+		0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f,
+	};
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+
     while (!glfwWindowShouldClose(window))
     {
         glClear(GL_COLOR_BUFFER_BIT);
@@ -158,17 +171,13 @@ int main(void)
         // 1rst attribute buffer : vertices
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-        glVertexAttribPointer(
-        0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-        3,                  // size
-        GL_FLOAT,           // type
-        GL_FALSE,           // normalized?
-        0,                  // stride
-        (void*)0            // array buffer offset
-        );
+		glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0 );
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
         // Draw the triangle !
         glUseProgram(programID);
-        glDrawArrays(GL_TRIANGLES, 0, 3); // Starting from vertex 0; 3 vertices total -> 1 triangle
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glDisableVertexAttribArray(0);
 
         glfwSwapBuffers(window);
