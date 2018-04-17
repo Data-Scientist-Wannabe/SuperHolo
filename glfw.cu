@@ -1,12 +1,27 @@
 // compile with g++ -std=c++11 glad.c glfw.cpp -o glfw.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
-
 #include <glad/glad.h>
+#include <cuda.h>
+#include <cuda_gl_interop.h>
 #include <GLFW/glfw3.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <fstream>
 #include <vector>
+#include <iostream>
 #include <sstream>
+
+#define TEXTURE_SIZE	128
+
+#define CUDA_CALL( call )               \
+{                                       \
+cudaError_t result = call;              \
+if ( cudaSuccess != result )            \
+    std::cout << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl;  \
+}
+
+void * cuda_dev_render_buffer;
+struct cudaGraphicsResource * 		cuda_tex_resource;
 
 static const GLfloat g_vertex_buffer_data[] = {
 /*	position x, y	texcoord u,v */
@@ -15,6 +30,62 @@ static const GLfloat g_vertex_buffer_data[] = {
     1.0f, -1.0f,	1.0f, 1.0f,
 	1.0f,  1.0f,	1.0f, 0.0f,
 };
+
+__global__ void drawCuda(float * values)
+{
+    for(int x = threadIdx.x; x < TEXTURE_SIZE; x += blockDim.x)
+    {
+        for(int y = blockIdx.x; y < TEXTURE_SIZE; y+= gridDim.x)
+        {
+			uchar4 c4 = make_uchar4((x & 0x20) ? 100 : 0, 0, (y & 0x20) ? 100 : 0, 0);
+    		values[x + y * TEXTURE_SIZE] = ((x & 0x20) ? 1.0f : 0.5f) * ((y & 0x20) ? 1.0f : 0.5f);
+		}
+	}
+}
+
+// Create 2D OpenGL texture in gl_tex and bind it to CUDA in cuda_tex
+void createGLTextureForCUDA(
+	GLuint * gl_tex,
+	cudaGraphicsResource** cuda_tex, 
+	unsigned int size_x,
+	unsigned int size_y)
+{
+	glGenTextures(1, gl_tex);
+	glBindTexture(GL_TEXTURE_2D, *gl_tex);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size_x, size_y, 0, GL_RED, GL_FLOAT, NULL);
+
+	CUDA_CALL(cudaGraphicsGLRegisterImage(
+		cuda_tex,
+		*gl_tex,
+		GL_TEXTURE_2D,
+		cudaGraphicsRegisterFlagsWriteDiscard));
+}
+
+void generateCUDAImage()
+{
+	dim3 dimGrid(TEXTURE_SIZE); 	// N_BLOCKS
+	dim3 dimBlock(TEXTURE_SIZE); 	// N_THREADS
+	drawCuda<<<dimGrid, dimBlock>>>((float*)cuda_dev_render_buffer);
+	
+	cudaArray * texture_ptr;
+	CUDA_CALL(cudaGraphicsMapResources(1, &cuda_tex_resource, 0));
+	CUDA_CALL(cudaGraphicsSubResourceGetMappedArray(&texture_ptr, cuda_tex_resource, 0, 0));
+
+	int size_tex_data = TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float);
+
+	CUDA_CALL(cudaMemcpyToArray(
+		texture_ptr, 0, 0, 
+		cuda_dev_render_buffer, 
+		size_tex_data, 
+		cudaMemcpyDeviceToDevice));
+	CUDA_CALL(cudaGraphicsUnmapResources(1, &cuda_tex_resource, 0));
+}
 
 static void error_callback(int error, const char* description)
 {
@@ -149,24 +220,24 @@ int main(void)
     GLuint programID = LoadShaders( "shaders/test_vs.glsl", "shaders/test_ps.glsl" );
 
 	GLuint texture;
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glUniform1i(glGetUniformLocation(programID, "tex"), 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	// Black/white checkerboard
-	float pixels[] = {
-		0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f,
-	};
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_FLOAT, pixels);
+	createGLTextureForCUDA(&texture, &cuda_tex_resource, TEXTURE_SIZE, TEXTURE_SIZE);
+	cudaMalloc(&cuda_dev_render_buffer, TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float));
+
+	
+	
+	glUniform1i(glGetUniformLocation(programID, "tex"), texture);
 
     while (!glfwWindowShouldClose(window))
     {
-        glClear(GL_COLOR_BUFFER_BIT);
+		generateCUDAImage();
+		glfwPollEvents();
+
+        glClear(GL_COLOR_BUFFER_BIT |  GL_DEPTH_BUFFER_BIT);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture);
+
+		glUseProgram(programID);
 
         // 1rst attribute buffer : vertices
         glEnableVertexAttribArray(0);
@@ -175,14 +246,15 @@ int main(void)
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0 );
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-        // Draw the triangle !
-        glUseProgram(programID);
+        
+		// Draw the triangle !
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glDisableVertexAttribArray(0);
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        glfwSwapBuffers(window);      
     }
+
+	cudaGraphicsUnregisterResource(cuda_tex_resource);
 
     glfwDestroyWindow(window);
     glfwTerminate();

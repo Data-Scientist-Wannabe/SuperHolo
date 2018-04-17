@@ -5,5 +5,5 @@ out vec3 color;
 uniform sampler2D tex;
 
 void main(){
-  color = texture(tex, texCoord).rgb;
+  color = vec3(texture(tex, texCoord).r);
 }
