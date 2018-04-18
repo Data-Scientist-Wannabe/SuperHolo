@@ -1,4 +1,6 @@
-// compile with g++ -std=c++11 glad.c glfw.cpp -o glfw.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
+/* compile with:
+/usr/local/cuda/bin/nvcc -std=c++11 glad.c glfw.cpp kernel.cu kinect.cpp sim.cu interop.cu -o realtime.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl -lfreenect
+*/
 #include <glad/glad.h>
 #include <cuda.h>
 #include <cuda_gl_interop.h>
@@ -11,17 +13,9 @@
 #include <iostream>
 #include <sstream>
 
-#define TEXTURE_SIZE	128
-
-#define CUDA_CALL( call )               \
-{                                       \
-cudaError_t result = call;              \
-if ( cudaSuccess != result )            \
-    std::cout << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl;  \
-}
-
-void * cuda_dev_render_buffer;
-struct cudaGraphicsResource * 		cuda_tex_resource;
+#include "kinect.h"
+#include "sim.h"
+#include "dmd.h"
 
 static const GLfloat g_vertex_buffer_data[] = {
 /*	position x, y	texcoord u,v */
@@ -30,62 +24,6 @@ static const GLfloat g_vertex_buffer_data[] = {
     1.0f, -1.0f,	1.0f, 1.0f,
 	1.0f,  1.0f,	1.0f, 0.0f,
 };
-
-__global__ void drawCuda(float * values)
-{
-    for(int x = threadIdx.x; x < TEXTURE_SIZE; x += blockDim.x)
-    {
-        for(int y = blockIdx.x; y < TEXTURE_SIZE; y+= gridDim.x)
-        {
-			uchar4 c4 = make_uchar4((x & 0x20) ? 100 : 0, 0, (y & 0x20) ? 100 : 0, 0);
-    		values[x + y * TEXTURE_SIZE] = ((x & 0x20) ? 1.0f : 0.5f) * ((y & 0x20) ? 1.0f : 0.5f);
-		}
-	}
-}
-
-// Create 2D OpenGL texture in gl_tex and bind it to CUDA in cuda_tex
-void createGLTextureForCUDA(
-	GLuint * gl_tex,
-	cudaGraphicsResource** cuda_tex, 
-	unsigned int size_x,
-	unsigned int size_y)
-{
-	glGenTextures(1, gl_tex);
-	glBindTexture(GL_TEXTURE_2D, *gl_tex);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, size_x, size_y, 0, GL_RED, GL_FLOAT, NULL);
-
-	CUDA_CALL(cudaGraphicsGLRegisterImage(
-		cuda_tex,
-		*gl_tex,
-		GL_TEXTURE_2D,
-		cudaGraphicsRegisterFlagsWriteDiscard));
-}
-
-void generateCUDAImage()
-{
-	dim3 dimGrid(TEXTURE_SIZE); 	// N_BLOCKS
-	dim3 dimBlock(TEXTURE_SIZE); 	// N_THREADS
-	drawCuda<<<dimGrid, dimBlock>>>((float*)cuda_dev_render_buffer);
-	
-	cudaArray * texture_ptr;
-	CUDA_CALL(cudaGraphicsMapResources(1, &cuda_tex_resource, 0));
-	CUDA_CALL(cudaGraphicsSubResourceGetMappedArray(&texture_ptr, cuda_tex_resource, 0, 0));
-
-	int size_tex_data = TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float);
-
-	CUDA_CALL(cudaMemcpyToArray(
-		texture_ptr, 0, 0, 
-		cuda_dev_render_buffer, 
-		size_tex_data, 
-		cudaMemcpyDeviceToDevice));
-	CUDA_CALL(cudaGraphicsUnmapResources(1, &cuda_tex_resource, 0));
-}
 
 static void error_callback(int error, const char* description)
 {
@@ -191,9 +129,66 @@ GLuint LoadShaders(const char * vertex_file_path,const char * fragment_file_path
 	return ProgramID;
 }
 
+int initializeFreenect(struct Kinect * kinect, int index)
+{
+	freenect_context * fn_ctx;
+	int ret = freenect_init(&fn_ctx, NULL);
+	if (ret < 0)
+		return ret;
+
+	// Show debug messages and use camera only.
+	freenect_set_log_level(fn_ctx, FREENECT_LOG_DEBUG);
+	freenect_select_subdevices(fn_ctx, FREENECT_DEVICE_CAMERA);
+
+	// Show debug messages and use camera only.
+	freenect_set_log_level(fn_ctx, FREENECT_LOG_DEBUG);
+	freenect_select_subdevices(fn_ctx, FREENECT_DEVICE_CAMERA);
+	// Find out how many devices are connected.
+	int num_devices = ret = freenect_num_devices(fn_ctx);
+	if (ret < 0)
+		return ret;
+
+	if (num_devices == 0)
+	{
+		printf("No device found!\n");
+		freenect_shutdown(fn_ctx);
+		return 1;
+	}
+
+	ret = kinect_init(kinect, fn_ctx, index);
+	if (ret < 0)
+	{
+		freenect_shutdown(fn_ctx);
+		return ret;
+	}
+
+	printf("freenect initialized\n");
+	return 0;
+}
+
+int startKinect(struct Kinect * kinect, pthread_t * thread)
+{
+	if (int ret = pthread_create(thread, NULL, kinect_threadfunc, (void*)kinect)) {
+		printf("pthread_create failed\n");
+		kinect_destroy(kinect);
+		freenect_shutdown(kinect->fn_ctx);
+		return ret;
+	}
+
+	printf("kinect started\n");
+	return 0;
+}
+
 int main(void)
 {
+	int ret;
+
     GLFWwindow* window;
+
+	pthread_t kinect_thread;
+
+	struct Kinect kinect;
+
     glfwSetErrorCallback(error_callback);
     if (!glfwInit())
         exit(EXIT_FAILURE);
@@ -208,6 +203,14 @@ int main(void)
     glfwSetKeyCallback(window, key_callback);
     printf("%s\n", glGetString(GL_VERSION));
 
+	Simulation sim(ARRAY_WIDTH, ARRAY_HEIGHT, KINECT_WIDTH * KINECT_HEIGHT);
+	
+	if( ret = initializeFreenect(&kinect, 0)){
+		return ret; }
+
+	if( ret = startKinect(&kinect, &kinect_thread)) {
+		return ret; }
+
     // This will identify our vertex buffer
     GLuint vertexbuffer;
     // Generate 1 buffer, put the resulting identifier in vertexbuffer
@@ -218,24 +221,24 @@ int main(void)
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
     GLuint programID = LoadShaders( "shaders/test_vs.glsl", "shaders/test_ps.glsl" );
+	glUniform1i(glGetUniformLocation(programID, "tex"), sim.GetGLTex());
 
-	GLuint texture;
-	createGLTextureForCUDA(&texture, &cuda_tex_resource, TEXTURE_SIZE, TEXTURE_SIZE);
-	cudaMalloc(&cuda_dev_render_buffer, TEXTURE_SIZE * TEXTURE_SIZE * sizeof(float));
-
-	
-	
-	glUniform1i(glGetUniformLocation(programID, "tex"), texture);
+	uint32_t old_time = 0;
 
     while (!glfwWindowShouldClose(window))
     {
-		generateCUDAImage();
+		if(kinect.depth_timestamp != old_time)
+		{
+			old_time = kinect.depth_timestamp;
+			sim.setPoints(&kinect, 8000);
+			sim.generateImage(4);
+		}
 		glfwPollEvents();
 
         glClear(GL_COLOR_BUFFER_BIT |  GL_DEPTH_BUFFER_BIT);
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindTexture(GL_TEXTURE_2D, sim.GetGLTex());
 
 		glUseProgram(programID);
 
@@ -254,8 +257,9 @@ int main(void)
         glfwSwapBuffers(window);      
     }
 
-	cudaGraphicsUnregisterResource(cuda_tex_resource);
-
+	kinect.running = false;
+	pthread_join(kinect_thread, NULL);
+	kinect_destroy(&kinect);
     glfwDestroyWindow(window);
     glfwTerminate();
     exit(EXIT_SUCCESS);
