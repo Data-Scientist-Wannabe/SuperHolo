@@ -26,7 +26,7 @@ struct Kinect
 
     uint16_t depth_buffer[KINECT_WIDTH][KINECT_HEIGHT];
 
-    uint8_t  video_buffer[3 * KINECT_WIDTH * KINECT_HEIGHT];
+    uint8_t  video_buffer[3 * KINECT_WIDTH * KINECT_HEIGHT];    
 };
 
 extern void * kinect_threadfunc(void * arg);

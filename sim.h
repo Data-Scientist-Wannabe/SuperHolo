@@ -9,9 +9,8 @@ class Simulation
 {
 private:
     int width, height;
-    int point_count;
+    int max_point_count;
 
-    float4 * h_points;
     float4 * d_points;
 
     float * d_pattern;
@@ -33,6 +32,6 @@ public:
     void SetTranslation(float t) { this->translation = t; }
 
     void generateImage(int);
-    void setPoints(Kinect * kinect, uint16_t max);
+    void setPoints(float4 * points, int count);
 
 };
