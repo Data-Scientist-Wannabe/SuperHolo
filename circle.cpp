@@ -1,6 +1,7 @@
 #include "circle.h"
 #include <cmath>
 #include <ruined_math/matrix.h>
+#include <GLFW/glfw3.h>
 
 #include "dmd.h"
 
@@ -10,10 +11,11 @@
 
 #define TWO_PI          6.28318530718f
 
-CircleDemo::CircleDemo(float radius, int point_count)
-: point_count(point_count), radius(radius)
+void CircleDemo::generatePoints()
 {
     using namespace Ruined::Math;
+
+    free(this->points);
 
     this->points = (Vector4 *) malloc(sizeof(Vector4) * point_count);
 
@@ -24,6 +26,12 @@ CircleDemo::CircleDemo(float radius, int point_count)
     {
         this->points[i] = Vector4(sinf(delta * i), cosf(delta * i), 0.0f, power);
     }
+}
+
+CircleDemo::CircleDemo(float radius, int point_count)
+: point_count(point_count), radius(radius), points(nullptr)
+{
+    generatePoints();
 }
 
 CircleDemo::~CircleDemo()
@@ -42,4 +50,17 @@ void CircleDemo::Update(Simulation * sim, double time)
     sim->SetTransformation(mat);
     sim->setPoints(this->points, this->point_count);
     sim->generateImage();
+}
+
+void CircleDemo::KeyPress(int key, int scancode, int action, int mods)
+{
+    if(key == GLFW_KEY_UP && action == GLFW_PRESS)
+	{
+        point_count++;
+		generatePoints();
+	} else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+	{  
+        point_count = (point_count <= 0 ? 0 : point_count - 1);
+		generatePoints();
+	}
 }

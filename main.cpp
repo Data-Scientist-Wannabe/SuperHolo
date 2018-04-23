@@ -81,15 +81,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		m_amp += 0.1f;
 	else if(key == GLFW_KEY_MINUS && action == GLFW_PRESS)
 		m_amp -= 0.1f;
-	else if(key == GLFW_KEY_UP && action == GLFW_PRESS)
-	{
-		delete(p_cir);
-		p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, ++m_point_count);
-	} else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-	{
-		delete(p_cir);
-		p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, --m_point_count);
-	}
+
+	p_demo->KeyPress(key, scancode, action, mods);
 }
 
 void initializeDemos()

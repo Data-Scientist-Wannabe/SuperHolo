@@ -7,9 +7,13 @@ class CircleDemo : public Demo
     int point_count;
     float radius;
 
+protected:
+    void generatePoints();
+
 public:
     CircleDemo(float radius, int points);
     ~CircleDemo();
 
     void Update(Simulation * sim, double time);
+    void KeyPress(int key, int scancode, int action, int mods);
 };
