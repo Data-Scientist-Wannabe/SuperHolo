@@ -1,4 +1,8 @@
+#pragma once
+
 #include <cuda.h>
+#include <ruined_math/matrix.h>
+
 #include "glad/glad.h"
 #include "kinect.h"
 
@@ -7,31 +11,31 @@
 
 class Simulation
 {
+
 private:
     int width, height;
     int max_point_count;
 
-    float4 * d_points;
-
+    float * d_points;
     float * d_pattern;
-    
-    void * cuda_dev_render_buffer;
+    float * d_transform;
+    float * cuda_dev_render_buffer;
+
     struct cudaGraphicsResource * 		cuda_tex_resource;
-    
     GLuint gl_tex;
 
-    float scale;
-    float translation;
+    float     amp;
 
 public:
     Simulation(int width, int height, int max_points);
+    ~Simulation();
 
     GLuint GetGLTex(void) { return gl_tex; }
 
-    void SetScale(float s) { this->scale = scale; }
-    void SetTranslation(float t) { this->translation = t; }
+    void SetAmplification(float a) { this->amp = a; }
+    void SetTransformation(Ruined::Math::Matrix transform);
 
     void generateImage(int);
-    void setPoints(float4 * points, int count);
+    void setPoints(void * points, int count);
 
 };

@@ -13,4 +13,7 @@
 #define PLANE_CONST 57187.65f
 #define VAL_CONST   9929180.296f
 
-extern "C" void launch_kernel( dim3, dim3 block, float * pattern, float4 * points, int count);
+extern "C" void launch_kernel( dim3 grid, dim3 block, float * pattern, float4 * points, int count);
+
+extern "C" void launch_transform( dim3 grid, dim3 block, float4 * points_in, float4 * points_out,
+                    float4 * matrix, float amp, int count);

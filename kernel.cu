@@ -46,6 +46,17 @@ __global__ void simulation(float * pattern, float4 * points, int count)
     }
 }
 
+__global__ void transform(float4 * pin, float4 * pout, float4 * mat, float amp, int count)
+{
+    for(int i = blockIdx.x * blockDim.x + threadIdx.x; i < count; i += gridDim.x * blockDim.x)
+    {
+        pout[i].x = mat[0].x * pin[i].x + mat[0].y * pin[i].y + mat[0].z * pin[i].z + mat[0].w;
+        pout[i].y = mat[1].x * pin[i].x + mat[1].y * pin[i].y + mat[1].z * pin[i].z + mat[1].w;
+        pout[i].z = mat[2].x * pin[i].x + mat[2].y * pin[i].y + mat[2].z * pin[i].z + mat[2].w;
+        pout[i].w = pin[i].w * amp;
+    }
+}
+
 extern "C" void
 launch_kernel(  dim3 grid, 
                     dim3 block,
@@ -54,4 +65,16 @@ launch_kernel(  dim3 grid,
                     int count)
 {
     simulation<<<grid, block>>>(pattern, points, count);
+}
+
+extern "C" void
+launch_transform(   dim3 grid, 
+                    dim3 block,
+                    float4 * points_in,
+                    float4 * points_out,
+                    float4 * matrix,
+                    float amp,
+                    int count)
+{
+    transform<<<grid, block>>>(points_in, points_out, matrix, amp, count);
 }

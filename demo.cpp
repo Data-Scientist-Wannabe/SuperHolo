@@ -11,9 +11,11 @@
 #include "sim.h"
 #include "dmd.h"
 #include "fs_quad.h"
+#include "circle.h"
 
 GLFWwindow * p_win;
 Simulation * p_sim;
+CircleDemo * p_cir;
 GLuint		 m_tex;
 GLuint		 m_prg;
 
@@ -48,6 +50,9 @@ int main(void)
     exit(shutdown());
 }
 
+float 	m_amp = 1.0f;
+int		m_point_count = 3;
+
 static void error_callback(int error, const char* description)
 {
     fputs(description, stderr);
@@ -56,6 +61,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+	else if(key == GLFW_KEY_EQUAL && action == GLFW_PRESS)
+		m_amp += 0.1f;
+	else if(key == GLFW_KEY_MINUS && action == GLFW_PRESS)
+		m_amp -= 0.1f;
+	else if(key == GLFW_KEY_UP && action == GLFW_PRESS)
+	{
+		delete(p_cir);
+		p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, ++m_point_count);
+	} else if(key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+	{
+		delete(p_cir);
+		p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, --m_point_count);
+	}
 }
 
 int initialize()
@@ -82,6 +100,8 @@ int initialize()
 
 	fsQuadInitialize();
 
+	p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, 3);
+
 	return 0;
 }
 
@@ -92,22 +112,28 @@ int shutdown()
 	glDeleteProgram(m_prg);
     glfwTerminate();
 
+	delete(p_sim);
+	delete(p_cir);
+
 	return EXIT_SUCCESS;
 }
 
 float4 p_points[4];
 
-void update(double)
+void update(double time)
 {
-	p_points[0] = { PATTERN_WIDTH * 0.33f, PATTERN_HEIGHT * 0.20f, 0.30f, 0.33f };
+	/* p_points[0] = { PATTERN_WIDTH * 0.33f, PATTERN_HEIGHT * 0.20f, 0.30f, 0.33f };
     p_points[1] = { PATTERN_WIDTH * 0.50f, PATTERN_HEIGHT * 0.40f, 0.30f, 0.33f };
     p_points[2] = { PATTERN_WIDTH * 0.66f, PATTERN_HEIGHT * 0.60f, 0.30f, 0.33f };
 	p_points[3] = { PATTERN_WIDTH * 0.50f, PATTERN_HEIGHT * 0.80f, 0.30f, 0.33f };
 
-	p_sim->setPoints(p_points, 4);
-	p_sim->generateImage(4);
+	p_sim->setPoints(p_points, 4); */
+
+	p_cir->UpdateSim(p_sim, time);
+	p_sim->SetAmplification(m_amp);
+	p_sim->generateImage(p_cir->PointCount());
 }
-#include <cuda.h>
+
 void draw(double)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
