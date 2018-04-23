@@ -1,5 +1,6 @@
 /* compile with:
-/usr/local/cuda/bin/nvcc -std=c++11 glad.c demo.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp -o realtime.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
+What is a makefile :p
+/usr/local/cuda/bin/nvcc -std=c++11 glad.c main.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp circle.cpp -o demo.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
 */
 #include <glad/glad.h>
 #include <cuda.h>
@@ -13,11 +14,16 @@
 #include "fs_quad.h"
 #include "circle.h"
 
-GLFWwindow * p_win;
-Simulation * p_sim;
-CircleDemo * p_cir;
-GLuint		 m_tex;
-GLuint		 m_prg;
+GLFWwindow	* p_win;
+GLFWwindow 	* p_win2;
+
+GLuint		m_tex;
+GLuint		m_prg;
+
+Simulation	* p_sim;
+Demo		* p_demo;
+CircleDemo	* p_cir;
+
 
 int initialize();
 
@@ -26,6 +32,10 @@ void update(double);
 void draw(double);
 
 int shutdown();
+
+void initializeDemos();
+
+void destroyDemos();
 
 int main(void)
 {
@@ -42,9 +52,15 @@ int main(void)
 
 		update(GLFW_TIME);
 		
+		glfwMakeContextCurrent(p_win);
 		draw(GLFW_TIME);
-		
-        glfwSwapBuffers(p_win);      
+        glfwSwapBuffers(p_win);
+
+		if(p_win2){
+			glfwMakeContextCurrent(p_win2);
+			draw(GLFW_TIME);
+			glfwSwapBuffers(p_win2);
+		}
     }
 
     exit(shutdown());
@@ -76,6 +92,18 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	}
 }
 
+void initializeDemos()
+{
+	p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, 3);
+
+	p_demo = p_cir;
+}
+
+void destroyDemos()
+{
+	delete(p_cir);
+}
+
 int initialize()
 {
     glfwSetErrorCallback(error_callback);
@@ -83,7 +111,24 @@ int initialize()
         return EXIT_FAILURE;
 	}
 
-    p_win = glfwCreateWindow(ARRAY_WIDTH, ARRAY_HEIGHT, "GPU Holography", NULL, NULL);
+	int monitor_count;
+	GLFWmonitor** monitors = glfwGetMonitors(&monitor_count);
+
+	p_win = glfwCreateWindow(ARRAY_HEIGHT * (PATTERN_WIDTH / PATTERN_HEIGHT), ARRAY_HEIGHT, "GPU Holography", NULL, NULL);
+
+	if(monitor_count > 1)
+	{
+		const GLFWvidmode* mode = glfwGetVideoMode(monitors[1]);
+		glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+		glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+		glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+		glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+		p_win2 = glfwCreateWindow(mode->width, mode->height, "DMD View", monitors[1], p_win);
+	} else {
+		p_win2 = nullptr;
+	}
+
     if (!p_win){
         glfwTerminate();
         return EXIT_FAILURE;
@@ -100,7 +145,7 @@ int initialize()
 
 	fsQuadInitialize();
 
-	p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, 3);
+	initializeDemos();
 
 	return 0;
 }
@@ -108,30 +153,26 @@ int initialize()
 int shutdown()
 {
 	fsQuadDestroy();
+
     glfwDestroyWindow(p_win);
+
+	if(p_win2) {
+		glfwDestroyWindow(p_win2);
+	}
+
 	glDeleteProgram(m_prg);
     glfwTerminate();
 
 	delete(p_sim);
-	delete(p_cir);
+	destroyDemos();
 
 	return EXIT_SUCCESS;
 }
 
-float4 p_points[4];
-
 void update(double time)
 {
-	/* p_points[0] = { PATTERN_WIDTH * 0.33f, PATTERN_HEIGHT * 0.20f, 0.30f, 0.33f };
-    p_points[1] = { PATTERN_WIDTH * 0.50f, PATTERN_HEIGHT * 0.40f, 0.30f, 0.33f };
-    p_points[2] = { PATTERN_WIDTH * 0.66f, PATTERN_HEIGHT * 0.60f, 0.30f, 0.33f };
-	p_points[3] = { PATTERN_WIDTH * 0.50f, PATTERN_HEIGHT * 0.80f, 0.30f, 0.33f };
-
-	p_sim->setPoints(p_points, 4); */
-
-	p_cir->UpdateSim(p_sim, time);
 	p_sim->SetAmplification(m_amp);
-	p_sim->generateImage(p_cir->PointCount());
+	p_demo->Update(p_sim, time);
 }
 
 void draw(double)

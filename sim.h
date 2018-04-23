@@ -15,6 +15,7 @@ class Simulation
 private:
     int width, height;
     int max_point_count;
+    int point_count;
 
     float * d_points;
     float * d_pattern;
@@ -35,7 +36,7 @@ public:
     void SetAmplification(float a) { this->amp = a; }
     void SetTransformation(Ruined::Math::Matrix transform);
 
-    void generateImage(int);
+    void generateImage(void);
     void setPoints(void * points, int count);
 
 };

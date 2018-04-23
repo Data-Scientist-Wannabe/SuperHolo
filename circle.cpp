@@ -32,13 +32,14 @@ CircleDemo::~CircleDemo()
     this->points = nullptr;
 }
 
-void CircleDemo::UpdateSim(Simulation * sim, double time)
+void CircleDemo::Update(Simulation * sim, double time)
 {
     using namespace Ruined::Math;
     Matrix mat =    Matrix::CreateTranslation(CIRCLE_X, CIRCLE_Y, CIRCLE_DEPTH) *
                     Matrix::CreateRotationZ(time) *
-                    //Matrix::CreateRotationX(time * 0.9f) *
+                    // Matrix::CreateRotationX(time * 0.9f) *
                     Matrix::CreateScale(radius);
     sim->SetTransformation(mat);
     sim->setPoints(this->points, this->point_count);
+    sim->generateImage();
 }

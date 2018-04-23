@@ -4,7 +4,7 @@
 #include "kernel.h"
 
 Simulation::Simulation(int width, int height, int max_points)
-: width(width), height(height), max_point_count(max_points)
+: width(width), height(height), max_point_count(max_points), point_count(0)
 {
     createGLTextureForCUDA(&gl_tex, &cuda_tex_resource, width, height);
 
@@ -23,11 +23,8 @@ Simulation::~Simulation()
 	cudaFree(this->d_transform);
 }
 
-void Simulation::generateImage(int point_count)
+void Simulation::generateImage(void)
 {
-	if(point_count > this->max_point_count)
-		point_count = this->max_point_count;
-
 	launch_transform(64, 64, 
 		(float4*)d_points, 
 		(float4*)d_points + max_point_count,
@@ -56,12 +53,14 @@ void Simulation::generateImage(int point_count)
 
 extern double GLFW_TIME;
 
-void Simulation::setPoints(void * points, int point_count)
+void Simulation::setPoints(void * points, int count)
 {
-	if(point_count > this->max_point_count)
-		point_count = this->max_point_count;
+	if(count > this->max_point_count)
+		count = this->max_point_count;
 
-	cudaMemcpy(d_points, points, point_count * sizeof(float4), cudaMemcpyHostToDevice);
+	this->point_count = count;
+
+	cudaMemcpy(d_points, points, count * sizeof(float4), cudaMemcpyHostToDevice);
 }
 
 void Simulation::SetTransformation(Ruined::Math::Matrix mat)

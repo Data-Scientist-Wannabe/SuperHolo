@@ -1,7 +1,7 @@
 #include <ruined_math/vector_f.h>
-#include "sim.h"
+#include "demo.h"
 
-class CircleDemo
+class CircleDemo : public Demo
 {
     Ruined::Math::Vector4 * points;
     int point_count;
@@ -11,6 +11,5 @@ public:
     CircleDemo(float radius, int points);
     ~CircleDemo();
 
-    void UpdateSim(Simulation * sim, double time);
-    int PointCount(void) {return point_count;}
+    void Update(Simulation * sim, double time);
 };
