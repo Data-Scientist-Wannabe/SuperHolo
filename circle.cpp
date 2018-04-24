@@ -29,7 +29,7 @@ void CircleDemo::generatePoints()
 }
 
 CircleDemo::CircleDemo(float radius, int point_count)
-: point_count(point_count), radius(radius), points(nullptr)
+: point_count(point_count), radius(radius), points(nullptr), playing(true), timer(0.0)
 {
     generatePoints();
 }
@@ -43,10 +43,14 @@ CircleDemo::~CircleDemo()
 void CircleDemo::Update(Simulation * sim, double time)
 {
     using namespace Ruined::Math;
+
+    if(playing)
+        timer = time;
+
     Matrix mat =    Matrix::CreateTranslation(CIRCLE_X, CIRCLE_Y, CIRCLE_DEPTH) *
-                    Matrix::CreateRotationZ(time) *
-                    // Matrix::CreateRotationX(time * 0.9f) *
-                    Matrix::CreateScale(radius);
+                    Matrix::CreateRotationZ(timer) *
+                    Matrix::CreateRotationX(timer * 0.9f) *
+                    Matrix::CreateScale(radius * sinf(timer * 0.5f) * 4.0f);
     sim->SetTransformation(mat);
     sim->setPoints(this->points, this->point_count);
     sim->generateImage();
@@ -62,5 +66,8 @@ void CircleDemo::KeyPress(int key, int scancode, int action, int mods)
 	{  
         point_count = (point_count <= 0 ? 0 : point_count - 1);
 		generatePoints();
-	}
+	} else if(key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        playing = !playing;
+    }
 }

@@ -1,6 +1,6 @@
 /* compile with:
 What is a makefile :p
-/usr/local/cuda/bin/nvcc -std=c++11 glad.c main.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp circle.cpp -o demo.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
+/usr/local/cuda/bin/nvcc -std=c++11 glad.c main.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp circle.cpp polygon.cpp -o demo.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
 */
 #include <glad/glad.h>
 #include <cuda.h>
@@ -13,6 +13,7 @@ What is a makefile :p
 #include "dmd.h"
 #include "fs_quad.h"
 #include "circle.h"
+#include "polygon.h"
 
 GLFWwindow	* p_win;
 GLFWwindow 	* p_win2;
@@ -23,6 +24,7 @@ GLuint		m_prg;
 Simulation	* p_sim;
 Demo		* p_demo;
 CircleDemo	* p_cir;
+PolygonDemo * p_poly;
 
 
 int initialize();
@@ -88,13 +90,15 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 void initializeDemos()
 {
 	p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, 3);
+	p_poly = new PolygonDemo(PATTERN_HEIGHT * 0.4f, 3, 3);
 
-	p_demo = p_cir;
+	p_demo = p_poly;
 }
 
 void destroyDemos()
 {
 	delete(p_cir);
+	delete(p_poly);
 }
 
 int initialize()

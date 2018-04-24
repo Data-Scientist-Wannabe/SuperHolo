@@ -9,7 +9,7 @@
 
 //#define __NEON__
 
-#define __SIMD__ __SSE__
+// #define __SIMD__ __SSE__
 
 #ifdef _MSC_VER
 #define ALIGN( n )	__declspec( align( n ) )
