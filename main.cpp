@@ -14,6 +14,7 @@ What is a makefile :p
 #include "fs_quad.h"
 #include "circle.h"
 #include "polygon.h"
+#include "cube.h"
 
 GLFWwindow	* p_win;
 GLFWwindow 	* p_win2;
@@ -25,6 +26,7 @@ Simulation	* p_sim;
 Demo		* p_demo;
 CircleDemo	* p_cir;
 PolygonDemo * p_poly;
+CubeDemo	* p_cube;
 
 
 int initialize();
@@ -91,14 +93,16 @@ void initializeDemos()
 {
 	p_cir = new CircleDemo(PATTERN_HEIGHT * 0.4f, 3);
 	p_poly = new PolygonDemo(PATTERN_HEIGHT * 0.4f, 3, 3);
+	p_cube = new CubeDemo(PATTERN_HEIGHT * 0.4f, 4);
 
-	p_demo = p_poly;
+	p_demo = p_cube;
 }
 
 void destroyDemos()
 {
 	delete(p_cir);
 	delete(p_poly);
+	delete(p_cube);
 }
 
 int initialize()
