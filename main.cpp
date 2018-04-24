@@ -1,6 +1,6 @@
 /* compile with:
 What is a makefile :p
-/usr/local/cuda/bin/nvcc -std=c++11 glad.c main.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp circle.cpp polygon.cpp -o demo.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
+/usr/local/cuda/bin/nvcc -std=c++11 glad.c main.cpp kernel.cu sim.cu interop.cu fs_quad.cpp gl_helpers.cpp circle.cpp polygon.cpp cube.cpp -o demo.out -Iinclude -I/usr/local/include -L/usr/local/lib -lglfw3 -lGL -lX11 -lpthread -ldl
 */
 #include <glad/glad.h>
 #include <cuda.h>
@@ -85,6 +85,12 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		m_amp += 0.1f;
 	else if(key == GLFW_KEY_MINUS && action == GLFW_PRESS)
 		m_amp -= 0.1f;
+	else if(key == GLFW_KEY_1 && action == GLFW_PRESS)
+		p_demo = p_cir;
+	else if(key == GLFW_KEY_2 && action == GLFW_PRESS)
+		p_demo = p_poly;
+	else if(key == GLFW_KEY_3 && action == GLFW_PRESS)
+		p_demo = p_cube;
 
 	p_demo->KeyPress(key, scancode, action, mods);
 }
@@ -95,7 +101,7 @@ void initializeDemos()
 	p_poly = new PolygonDemo(PATTERN_HEIGHT * 0.4f, 3, 3);
 	p_cube = new CubeDemo(PATTERN_HEIGHT * 0.4f, 4);
 
-	p_demo = p_cube;
+	p_demo = p_cir;
 }
 
 void destroyDemos()

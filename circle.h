@@ -1,5 +1,5 @@
 #include <ruined_math/vector_f.h>
-#include "demo.h"
+#include "../demo.h"
 
 class CircleDemo : public Demo
 {
